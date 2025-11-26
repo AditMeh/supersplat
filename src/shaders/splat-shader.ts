@@ -9,8 +9,9 @@ uniform vec4 lockedClr;
 uniform vec3 clrOffset;
 uniform vec4 clrScale;
 
-varying mediump vec3 texCoordIsLocked;          // store locked flat in z
+varying mediump vec3 texCoordIsLocked;          // store locked flag in z
 varying mediump vec4 color;
+varying mediump float vDepth;                   // normalized camera-space depth
 
 #if PICK_PASS
     uniform uint pickMode;                      // 0: add, 1: remove, 2: set
@@ -19,6 +20,8 @@ varying mediump vec4 color;
 mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
 
 uniform float saturation;
+uniform float depthNear;
+uniform float depthFar;
 
 vec3 applySaturation(vec3 color) {
     vec3 grey = vec3(dot(color, vec3(0.299, 0.587, 0.114)));
@@ -93,6 +96,12 @@ void main(void) {
     // store texture coord and locked state
     texCoordIsLocked = vec3(corner.uv, (vertexState & 2u) != 0u ? 1.0 : 0.0);
 
+    // calculate normalized camera-space depth for this splat
+    float viewDepth = -center.view.z;
+    float nearC = max(1e-6, depthNear);
+    float farC = max(nearC + 1e-6, depthFar);
+    vDepth = clamp((viewDepth - nearC) / (farC - nearC), 0.0, 1.0);
+
     #if UNDERLAY_PASS
         color = readColor(source);
         color.xyz = mix(color.xyz, selectedClr.xyz * 0.2, selectedClr.a) * selectedClr.a;
@@ -145,10 +154,14 @@ void main(void) {
 const fragmentShader = /* glsl*/`
 varying mediump vec3 texCoordIsLocked;
 varying mediump vec4 color;
+varying mediump float vDepth;
 
 uniform int mode;               // 0: centers, 1: rings
 uniform float pickerAlpha;
 uniform float ringSize;
+uniform float depthMode;        // 0.0: normal, 1.0: depth map
+uniform float depthNear;        // camera near plane (for validation)
+uniform float depthFar;         // camera far plane (for validation)
 
 const float EXP4 = exp(-4.0);
 const float INV_EXP4 = 1.0 / (1.0 - EXP4);
@@ -181,7 +194,31 @@ void main(void) {
                 }
             }
 
-            gl_FragColor = vec4(color.xyz * alpha, alpha);
+            if (depthMode > 0.5) {
+                // validate depth range
+                bool validRange = (depthFar > depthNear + 1e-5) && (depthNear > 0.0);
+                
+                // visualize depth as dark grayscale while preserving alpha
+                float d = clamp(vDepth, 0.0, 1.0);
+                
+                // debug: check if vDepth is in expected range
+                // if vDepth is always near 1.0, that explains brightness
+                // uncomment to visualize: red = depth near 0, green = depth near 1
+                // gl_FragColor = vec4(vDepth < 0.1 ? 1.0 : 0.0, vDepth > 0.9 ? 1.0 : 0.0, 0.0, alpha);
+                
+                if (!validRange) {
+                    // magenta = invalid depth range (should never happen)
+                    gl_FragColor = vec4(1.0, 0.0, 1.0, alpha);
+                } else {
+                    // apply strong gamma and brightness reduction
+                    // d = pow(d, 3.0);   // strong gamma to push most values darker
+                    // d *= 0.9;          // cap maximum brightness (reduced from 0.4)
+                    // shade depth color by opacity falloff (like normal rendering: color.xyz * alpha)
+                    gl_FragColor = vec4(vec3(d) * alpha, alpha);
+                }
+            } else {
+                gl_FragColor = vec4(color.xyz * alpha, alpha);
+            }
         #endif
     #endif
 }

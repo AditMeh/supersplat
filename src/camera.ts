@@ -336,6 +336,10 @@ class Camera extends Element {
             set('far_origin', points[7]);
             set('far_x', va.sub2(points[4], points[7]));
             set('far_y', va.sub2(points[6], points[7]));
+
+            // camera clip planes for depth visualization
+            device.scope.resolve('depthNear').setValue(camera.nearClip);
+            device.scope.resolve('depthFar').setValue(camera.farClip);
         };
 
         // temp control of camera start

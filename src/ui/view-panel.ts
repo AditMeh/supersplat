@@ -258,6 +258,26 @@ class ViewPanel extends Container {
         outlineSelectionRow.append(outlineSelectionLabel);
         outlineSelectionRow.append(outlineSelectionToggle);
 
+        // depth map
+
+        const depthMapRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const depthMapLabel = new Label({
+            text: localize('panel.view-options.depth-map'),
+            class: 'view-panel-row-label'
+        });
+
+        const depthMapToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: false
+        });
+
+        depthMapRow.append(depthMapLabel);
+        depthMapRow.append(depthMapToggle);
+
         // show grid
 
         const showGridRow = new Container({
@@ -307,6 +327,7 @@ class ViewPanel extends Container {
         this.append(cameraFlySpeedRow);
         this.append(highPrecisionRow);
         this.append(outlineSelectionRow);
+        this.append(depthMapRow);
         this.append(showGridRow);
         this.append(showBoundRow);
 
@@ -377,6 +398,16 @@ class ViewPanel extends Container {
 
         outlineSelectionToggle.on('change', (value: boolean) => {
             events.fire('view.setOutlineSelection', value);
+        });
+
+        // depth map
+
+        events.on('view.depthMap', (value: boolean) => {
+            depthMapToggle.value = value;
+        });
+
+        depthMapToggle.on('change', (value: boolean) => {
+            events.fire('view.setDepthMap', value);
         });
 
         // show grid

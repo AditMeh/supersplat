@@ -69,6 +69,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
+    events.on('view.depthMap', () => {
+        scene.forceRender = true;
+    });
+
     events.on('view.bands', (bands: number) => {
         scene.forceRender = true;
     });
@@ -626,6 +630,25 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setViewBands(value);
     });
 
+    // depth map view
+
+    let depthMapEnabled = false;
+
+    const setDepthMapEnabled = (value: boolean) => {
+        if (value !== depthMapEnabled) {
+            depthMapEnabled = value;
+            events.fire('view.depthMap', depthMapEnabled);
+        }
+    };
+
+    events.function('view.depthMap', () => {
+        return depthMapEnabled;
+    });
+
+    events.on('view.setDepthMap', (value: boolean) => {
+        setDepthMapEnabled(value);
+    });
+
     events.function('camera.getPose', () => {
         const camera = scene.camera;
         const position = camera.entity.getPosition();
@@ -656,6 +679,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             shBands: events.invoke('view.bands'),
             centersSize: events.invoke('camera.splatSize'),
             outlineSelection: events.invoke('view.outlineSelection'),
+            depthMap: events.invoke('view.depthMap'),
             showGrid: events.invoke('grid.visible'),
             showBound: events.invoke('camera.bound'),
             flySpeed: events.invoke('camera.flySpeed')
@@ -670,6 +694,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('view.setBands', docView.shBands);
         events.fire('camera.setSplatSize', docView.centersSize);
         events.fire('view.setOutlineSelection', docView.outlineSelection);
+        events.fire('view.setDepthMap', docView.depthMap ?? false);
         events.fire('grid.setVisible', docView.showGrid);
         events.fire('camera.setBound', docView.showBound);
         events.fire('camera.setFlySpeed', docView.flySpeed);

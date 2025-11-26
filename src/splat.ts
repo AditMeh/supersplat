@@ -351,11 +351,20 @@ class Splat extends Element {
         const selected = this.scene.camera.renderOverlays && events.invoke('selection') === this;
         const cameraMode = events.invoke('camera.mode');
         const cameraOverlay = events.invoke('camera.overlay');
+        const depthMap = events.invoke('view.depthMap');
 
         // configure rings rendering
         const material = this.entity.gsplat.instance.material;
         material.setParameter('mode', cameraMode === 'rings' ? 1 : 0);
         material.setParameter('ringSize', (selected && cameraOverlay && cameraMode === 'rings') ? 0.04 : 0);
+        material.setParameter('depthMode', depthMap ? 1.0 : 0.0);
+        
+        // set depth range for depth map visualization
+        if (depthMap) {
+            const camera = this.scene.camera.entity.camera;
+            material.setParameter('depthNear', camera.nearClip);
+            material.setParameter('depthFar', camera.farClip);
+        }
 
         const selectionAlpha = selected && !events.invoke('view.outlineSelection') ? this.selectionAlpha : 0;
 
